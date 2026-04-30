@@ -1,0 +1,307 @@
+🔥 1. Dashboard.jsx (UPDATED)
+
+📄 src/pages/Dashboard.jsx
+
+import KPICard from "../components/KPI/KPICard";
+import LineChartComponent from "../components/charts/LineChart";
+import PieChartComponent from "../components/charts/PieChart";
+import BarChartComponent from "../components/charts/BarChart";
+import axios from "axios";
+import { useEffect, useState } from "react";
+
+function Dashboard() {
+
+  const [incidents, setIncidents] = useState([]);
+
+  useEffect(() => {
+    axios.get("/api/incidents")
+      .then(res => setIncidents(res.data))
+      .catch(err => console.error(err));
+  }, []);
+
+  const newCount = incidents.filter(i => i.status === "New").length;
+  const closedCount = incidents.filter(i => i.status === "Closed").length;
+  const resolvedCount = incidents.filter(i => i.status === "Resolved").length;
+
+  return (
+    <div className="p-6 space-y-6">
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <KPICard title="New Incidents" value={newCount} />
+        <KPICard title="Closed Incidents" value={closedCount} />
+        <KPICard title="Resolved Incidents" value={resolvedCount} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <div className="bg-white p-6 rounded-xl shadow border h-80">
+          <h2 className="text-gray-500 mb-2">Incidents Over Time</h2>
+          <LineChartComponent incidents={incidents} />
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow border h-80 flex items-center justify-center">
+          Incident Status
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow border h-80 flex items-center justify-center">
+          Resolved vs Unresolved
+        </div>
+
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <div className="bg-white p-6 rounded-xl shadow border h-80">
+          <h2 className="text-gray-500 mb-2">New Incidents</h2>
+          <LineChartComponent incidents={incidents} />
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow border h-80">
+          <h2 className="text-gray-500 mb-2">Incidents by Category</h2>
+          <PieChartComponent incidents={incidents} />
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow border h-80">
+          <h2 className="text-gray-500 mb-2">Created vs Closed</h2>
+          <BarChartComponent incidents={incidents} />
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+
+------------------------------------------
+------------------------------------------
+
+
+export default Dashboard;
+🔥 2. Incidents.jsx (UPDATED)
+
+📄 src/pages/Incidents.jsx
+
+import axios from "axios";
+import { useEffect, useState } from "react";
+
+function Incidents() {
+
+  const [incidents, setIncidents] = useState([]);
+
+  useEffect(() => {
+    axios.get("/api/incidents")
+      .then(res => setIncidents(res.data))
+      .catch(err => console.error(err));
+  }, []);
+
+  return (
+    <div className="p-6 space-y-6">
+
+      <h2 className="text-2xl font-bold">Incidents</h2>
+
+      <div className="bg-white p-6 rounded-xl shadow border">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b text-gray-500">
+              <th>ID</th>
+              <th>Type</th>
+              <th>Severity</th>
+              <th>Status</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {incidents.map(i => (
+              <tr key={i.incident_id} className="border-b">
+                <td>#{i.incident_id}</td>
+                <td>{i.incident_type}</td>
+                <td>{i.severity}</td>
+                <td>{i.status}</td>
+                <td>{i.source_ip}</td>
+              </tr>
+            ))}
+          </tbody>
+
+        </table>
+      </div>
+
+    </div>
+  );
+}
+
+
+------------------------------------------
+------------------------------------------
+
+
+export default Incidents;
+🔥 3. LineChart.jsx (UPDATED)
+
+📄 src/components/charts/LineChart.jsx
+
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+
+function LineChartComponent({ incidents = [] }) {
+
+  const grouped = {};
+
+  incidents.forEach(i => {
+    const date = i.detected_at;
+    grouped[date] = (grouped[date] || 0) + 1;
+  });
+
+  const data = Object.keys(grouped).map(date => ({
+    date,
+    count: grouped[date]
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data}>
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Line dataKey="count" stroke="#3b82f6" />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+------------------------------------------
+------------------------------------------
+
+export default LineChartComponent;
+🔥 4. PieChart.jsx (UPDATED)
+
+📄 src/components/charts/PieChart.jsx
+
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+
+const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444"];
+
+function PieChartComponent({ incidents = [] }) {
+
+  const grouped = {};
+
+  incidents.forEach(i => {
+    grouped[i.incident_type] = (grouped[i.incident_type] || 0) + 1;
+  });
+
+  const data = Object.keys(grouped).map(type => ({
+    name: type,
+    value: grouped[type]
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie data={data} dataKey="value">
+          {data.map((entry, index) => (
+            <Cell key={index} fill={COLORS[index % COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+
+------------------------------------------
+------------------------------------------
+
+
+export default PieChartComponent;
+🔥 5. BarChart.jsx (UPDATED)
+
+📄 src/components/charts/BarChart.jsx
+
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+
+function BarChartComponent({ incidents = [] }) {
+
+  const grouped = {};
+
+  incidents.forEach(i => {
+    const date = i.detected_at;
+
+    if (!grouped[date]) {
+      grouped[date] = { created: 0, closed: 0 };
+    }
+
+    grouped[date].created++;
+
+    if (i.status === "Closed" || i.status === "Resolved") {
+      grouped[date].closed++;
+    }
+  });
+
+  const data = Object.keys(grouped).map(date => ({
+    date,
+    created: grouped[date].created,
+    closed: grouped[date].closed
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data}>
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="created" fill="#3b82f6" />
+        <Bar dataKey="closed" fill="#22c55e" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+
+------------------------------------------
+------------------------------------------
+
+
+export default BarChartComponent;
+🔥 THAT’S IT — NOTHING ELSE CHANGES
+🧠 SUMMARY (PUT THIS IN YOUR NOTES)
+
+👉 Files changed:
+
+Dashboard.jsx
+Incidents.jsx
+LineChart.jsx
+PieChart.jsx
+BarChart.jsx
+
+👉 What changed:
+
+Removed mock data
+Added axios
+Passed real data into charts
+
+👉 What stayed the same:
+
+UI
+Layout
+Components
+
+
+------------------------------------------
+------------------------------------------
+
+Why These Changes
+Mock data → API
+Replace fake data with real data from backend
+useState + useEffect
+Needed to store and load data from the server
+Pass incidents to charts
+So charts display real database data
+🔥 Key Idea (MOST IMPORTANT)
+
+👉 You are NOT changing your UI or logic
+👉 You are ONLY changing the data source
+
+🧠 One-Line Summary
+
+👉 “Replace local mock data with API calls to fetch real data from the backend.”
